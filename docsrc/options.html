@@ -703,7 +703,7 @@
         </dd>
 
         <dt id="--mount">
-            <code><b>--mount=</b><var>drive</var><b>:</b><var>path</var><b>,</b>[<var>drive</var><b>:</b><var>path</var> ... ]</code>
+            <code><b>--mount=</b>[<var>drive</var><b>:</b><var>path</var>[<b>,</b><var>drive</var><b>:</b><var>path</var> ... ]]</code>
         </dt>
         <dd>
             Assign the path
@@ -713,6 +713,7 @@
             If this option is not specified: on Windows, all Windows drive letters
             will be assigned to PC-BASIC drive
             letters; on other systems, the current working directory is assigned to <code>Z:</code>.
+            If this option is specified but empty, do not mount any drives (except the internal device <code>@:</code>).
         </dd>
 
         <dt id="-n">
@@ -795,7 +796,7 @@
         </dd>
 
         <dt id="--resume">
-            <code><b>--resume</b>[<b>=True</b>|<b>=False</b></code>
+            <code><b>--resume</b>[<b>=True</b>|<b>=False</b>]</code>
         </dt>
         <dd>
             Resume from saved state. Overrides <code><a href="#--run">--run</a></code> and
