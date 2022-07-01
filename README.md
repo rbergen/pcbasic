@@ -1,4 +1,55 @@
-### PC-BASIC ###
+# PC-BASIC #
+
+> ## Notes about this version ##
+>
+> This is a modified version of PC-BASIC, maintained by [Rutger van Bergen](https://github.com/rbergen). This version includes the possibility to enable the devices (disks, parallel ports, serial ports) in PC-BASIC in read-only mode. 
+>
+> ### Motivation ###
+>
+> PC-BASIC emulates GW-BASIC, a BASIC version that was first released in 1983, and the latest version of which was released in 1988. In that period, harddisk sizes were measured in megabytes, and often fit within two digits. A basic version of the MS-DOS operating system fit on a 360KB floppy, and GW-BASIC itself was 59KB in size. That is to say: things were simpler then, or at least easier to keep track of. GW-BASIC security model (effectively absent) was in line with that.
+> PC-BASIC provides GW-BASIC programs access to systems of today, running operating systems that are close to 20GB in size and consist of thousands of files. In that context, accidental or intential changes to key files are much harder to detect. It is for that reason that I added the ability to enable and mount devices in PC-BASIC in such a way that data can be pulled in, but not written out.
+>
+> ### Status ###
+>
+> Before and after implementing the read-only device feature I communicated with Rob Hagemens, the author of PC-BASIC, about the idea and offered it for inclusion in the official version of PC-BASIC. In the end, Rob decided not to include it. His considerations can be found in [this discussion](https://github.com/robhagemans/pcbasic/discussions/186) and [this pull request](https://github.com/robhagemans/pcbasic/pull/188). This means that this extension to PC-BASIC is not part of the official codebase and not supported by its author.
+>
+> ### Installation and use ###
+>
+> This version of PC-BASIC does not come with installers. This means that the following steps must be taken to use it:
+>
+> 1. Clone the repo from GitHub:
+>
+>    ```text
+>    git clone --recursive https://github.com/rbergen/pcbasic.git
+>    ```
+>
+> 2. Enter the PC-BASIC directory and compile the documentation:
+>
+>    ```text
+>    cd pcbasic
+>    python setup.py build_docs
+>    ```
+>
+> 3. Run PC-BASIC directly from the source directory:
+>
+>    On Windows: `.\pc-basic`
+>
+>    On Linux/MacOS: `./pc-basic`
+>
+> To allow the use of the graphical interface with smooth fonts on Windows, I've created a ZIP file that contains the SDL2 and SDL2_gfx libraries for 32-bit and 64-bit versions of Windows. It can be downloaded using [this link](https://rbergen.home.xs4all.nl/pcbasic-libs.zip). The contents of the ZIP file should be unpacked into the "main" PC-BASIC directory, that being the one you changed into in step 2. As I don't own a computer running MacOS, I have not been able to include MacOS libraries in the ZIP file. 
+>
+> ### Maintenance policy (or at least, intent) ###
+>
+> At the time of writing (July 1, 2022), this branch is tracking [the develop branch of PC-BASIC](https://github.com/robhagemans/pcbasic/tree/develop). I intend to switch to tracking the [master branch](https://github.com/robhagemans/pcbasic/tree/master) as soon as the next PC-BASIC version is released (current version is 2.0.4). I'll try to update my read-only device branch as quickly as possible after PC-BASIC itself is updated, but I cannot give any guarantees about the speed at which I will be able to do so. Feel free to open an issue on this repository (i.e. [my fork](https://github.com/rbergen/pcbasic)) if you find I'm lagging behind.
+>
+> ### Support and interaction ###
+>
+> First off, whatever you do, **please don't ask Rob Hagemans for information about or support on the read-only device feature**. The code is not in his PC-BASIC codebase by his explicit choice.
+> If you run into problems you can open [an issue on my fork](https://github.com/rbergen/pcbasic/issues). Similarly, if you want to discuss the feature's implementation, configuration, use, etc. then please start [a discussion on my fork](https://github.com/rbergen/pcbasic/discussions). There is one exception to that last sentence: you can contribute to the conversation about read-only devices in the context of PC-BASIC in [the existing discussion on the topic](https://github.com/robhagemans/pcbasic/discussions/186) in the upstream repository.
+>  
+
+## Description
+
 _A free, cross-platform emulator for the GW-BASIC family of interpreters._
 
 PC-BASIC is a free, cross-platform interpreter for GW-BASIC, Advanced BASIC (BASICA), PCjr Cartridge Basic and Tandy 1000 GWBASIC.
