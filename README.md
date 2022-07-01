@@ -6,7 +6,8 @@
 >
 > ### Motivation ###
 >
-> PC-BASIC emulates GW-BASIC, a BASIC version that was first released in 1983, and the latest version of which was released in 1988. In that period, harddisk sizes were measured in megabytes, and often fit within two digits. A basic version of the MS-DOS operating system fit on a 360KB floppy, and GW-BASIC itself was 59KB in size. That is to say: things were simpler then, or at least easier to keep track of. GW-BASIC security model (effectively absent) was in line with that.
+> PC-BASIC emulates GW-BASIC, a BASIC version that was first released in 1983, the latest version of which was released in 1988. In that period, harddisk sizes were measured in megabytes, and often fit within two digits. A basic version of the MS-DOS operating system fit on a 360KB floppy, and GW-BASIC itself was 59KB in size. That is to say: things were simpler then, or at least easier to keep track of. GW-BASIC's security model (effectively absent) was in line with that.
+>
 > PC-BASIC provides GW-BASIC programs access to systems of today, running operating systems that are close to 20GB in size and consist of thousands of files. In that context, accidental or intential changes to key files are much harder to detect. It is for that reason that I added the ability to enable and mount devices in PC-BASIC in such a way that data can be pulled in, but not written out.
 >
 > ### Status ###
@@ -45,6 +46,7 @@
 > ### Support and interaction ###
 >
 > First off, whatever you do, **please don't ask Rob Hagemans for information about or support on the read-only device feature**. The code is not in his PC-BASIC codebase by his explicit choice.
+>
 > If you run into problems you can open [an issue on my fork](https://github.com/rbergen/pcbasic/issues). Similarly, if you want to discuss the feature's implementation, configuration, use, etc. then please start [a discussion on my fork](https://github.com/rbergen/pcbasic/discussions). There is one exception to that last sentence: you can contribute to the conversation about read-only devices in the context of PC-BASIC in [the existing discussion on the topic](https://github.com/robhagemans/pcbasic/discussions/186) in the upstream repository.
 >  
 
