@@ -6,9 +6,9 @@
 >
 > ### Motivation ###
 >
-> PC-BASIC emulates GW-BASIC, a BASIC version that was first released in 1983, the latest version of which was released in 1988. In that period, harddisk sizes were measured in megabytes, and often fit within two digits. A basic version of the MS-DOS operating system fit on a 360KB floppy, and GW-BASIC itself was 59KB in size. That is to say: things were simpler then, or at least easier to keep track of. GW-BASIC's security model (effectively absent) was in line with that.
+> PC-BASIC emulates GW-BASIC, a BASIC version that was first released in 1983, the latest version of which was released in 1988. In that period, harddisk sizes were measured in megabytes, and often fit within two digits. A basic version of the MS-DOS operating system fit on a 360KB floppy, and GW-BASIC itself was 59KB in size. Also, computers were not permanently connected to the Internet. That is to say: things were simpler then, or at least easier to keep track of. GW-BASIC's security model (effectively absent) was in line with that.
 >
-> PC-BASIC provides GW-BASIC programs access to systems of today, running operating systems that are close to 20GB in size and consist of thousands of files. In that context, accidental or intential changes to key files are much harder to detect. It is for that reason that I added the ability to enable and mount devices in PC-BASIC in such a way that data can be pulled in, but not written out.
+> PC-BASIC provides GW-BASIC programs access to systems of today, running operating systems that are close to 20GB in size and consist of thousands of files. This makes that accidental or intential changes to key files are much harder to detect. Internet access is omnipresent and always-on, and even that is available to programs in PC-BASIC through serial ports. I feel that for this context, the GW-BASIC security model is not sufficient. Old GW-BASIC programs simply weren't written to deal with the context they're now confronted with. New programs could be deliberately malicious, and may well not be vetted to the same extent that other types of executable code are. It is for that reason that I added the ability to enable and mount devices in PC-BASIC in such a way that data can be pulled in, but not written out. It allows me to let PC-BASIC loose on all of its context, without files being broken or data going places it shouldn't.
 >
 > ### Status ###
 >
@@ -28,7 +28,8 @@
 >
 >    ```text
 >    cd pcbasic
->    python setup.py build_docs
+>    pip install Pillow lxml markdown
+>    python -m packaging build_docs
 >    ```
 >
 > 3. Run PC-BASIC directly from the source directory:
@@ -37,7 +38,11 @@
 >
 >    On Linux/MacOS: `./pc-basic`
 >
-> To allow the use of the graphical interface with smooth fonts on Windows, I've created a ZIP file that contains the SDL2 and SDL2_gfx libraries for 32-bit and 64-bit versions of Windows. It can be downloaded using [this link](https://rbergen.home.xs4all.nl/pcbasic-libs.zip). The contents of the ZIP file should be unpacked into the "main" PC-BASIC directory, that being the one you changed into in step 2. As I don't own a computer running MacOS, I have not been able to include MacOS libraries in the ZIP file. 
+> To allow the use of the graphical interface with smooth fonts on Windows, I've created a ZIP file that contains the SDL2 and SDL2_gfx libraries for 32-bit and 64-bit versions of Windows. It can be downloaded using [this link](https://rbergen.home.xs4all.nl/pcbasic-libs.zip). The contents of the ZIP file should be unpacked into the "main" PC-BASIC directory, that being the one you changed into in step 2. As I don't own a computer running MacOS, I have not been able to include MacOS libraries in the ZIP file.
+>
+> ### Documentation ###
+>
+> The documentation for the `disable-writes` configuration or command-line option is embedded in the documentation that was generated in step 3 of [Installation and use](#installation-and-use) and can then be found in the file `PC-BASIC_documentation.html` in the `doc` directory.
 >
 > ### Maintenance policy (or at least, intent) ###
 >
