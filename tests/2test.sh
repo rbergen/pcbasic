@@ -1,2 +1,2 @@
 #!/bin/sh
-python2 test.py
+python2 test.py "$@"

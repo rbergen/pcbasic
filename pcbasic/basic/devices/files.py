@@ -644,17 +644,14 @@ class Files(object):
                     drivepath, split_by=u':', quote=u'"', strip_quotes=True
                 )
                 path = drive + params[0]
-                if len(params) > 1:
-                    cwd = params[1]
-                    # ignore any further specifiers
-                else:
-                    cwd = u''
+                cwd = params[1] if len(params) > 1 else u''
+                drive_write = {u'rw': True, u'ro': False}.get(params[2], write_enabled) if len(params) > 2 else write_enabled
             else:
-                path, cwd = None, u''
+                path, cwd, drive_write = None, u'', write_enabled
             # treat device @: separately - internal disk must exist but may remain unmounted
             disk_class = disk.InternalDiskDevice if letter == b'@' else disk.DiskDevice
             self._devices[letter + b':'] = disk_class(
-                letter, path, cwd, codepage, text_mode, soft_linefeed, write_enabled
+                letter, path, cwd, codepage, text_mode, soft_linefeed, drive_write
             )
         # current_device value is normalised
         self._current_device = current_device
