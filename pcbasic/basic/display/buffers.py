@@ -2,7 +2,7 @@
 PC-BASIC - display.buffers
 Text and pixel buffer operations
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -182,6 +182,10 @@ class VideoBuffer(object):
     def row_length(self, row):
         """Return logical length of row."""
         return self._rows[row-1].length
+
+    def has_linefeed(self, row):
+        """Row terminates in a linefeed character."""
+        return self.wraps(row) and self.row_length(row) < self._width
 
     ##########################################################################
     # convert between text and pixel positions

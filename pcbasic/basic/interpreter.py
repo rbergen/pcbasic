@@ -2,7 +2,7 @@
 PC-BASIC - interpreter.py
 BASIC interpreter
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -81,8 +81,10 @@ class Interpreter(object):
     def parse(self):
         """Parse from the current pointer in current codestream."""
         while True:
+            # update what basic events need to be handled
+            self._queues.set_basic_event_handlers(self._basic_events.enabled)
             # check input and BASIC events. may raise Break, Reset or Exit
-            self._queues.check_events(self._basic_events.enabled)
+            self._queues.check_events()
             try:
                 self.handle_basic_events()
                 ins = self.get_codestream()
@@ -121,7 +123,6 @@ class Interpreter(object):
             # parse until break or end
             self.parse()
         except error.Break as e:
-            # ctrl-break stops foreground and background sound
             self._sound.stop_all_sound()
             self._handle_break(e)
         # move pointer to the start of direct line (for both on and off!)
@@ -148,11 +149,15 @@ class Interpreter(object):
             else:
                 self._program.bytecode.skip_to(tk.END_STATEMENT)
                 self.stop = self._program.bytecode.tell()
-        self._console.start_line()
-        self._console.write(e.get_message(self._program.get_line_number(pos)))
-        self.set_parse_mode(False)
-        self.input_mode = False
         self.parser.redo_on_break = False
+        if self.error_handle_mode:
+            e.trapped_error_num = self.error_num
+            e.trapped_error_pos = self.error_pos
+            #self.error_handle_mode = False
+        # ensure we can handle the break like an error
+        e.err = 0
+        e.pos = pos
+        raise e
 
     ###########################################################################
     # clear state
@@ -256,7 +261,10 @@ class Interpreter(object):
             self._files.lpt1_file.do_print()
         self.run_mode = new_runmode
         # events are active in run mode
-        self._basic_events.set_active(new_runmode)
+        if new_runmode:
+            self._queues.set_basic_event_handlers(self._basic_events.enabled)
+        else:
+            self._queues.set_basic_event_handlers([])
         # keep the sound engine on to avoid delays in run mode
         self._sound.persist(new_runmode)
         # suppress cassette messages in run mode

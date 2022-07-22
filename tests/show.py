@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """ PC-BASIC test diagnostics
 
-(c) 2020--2021 Rob Hagemans
+(c) 2020--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -86,7 +86,7 @@ for name in os.listdir(MODEL):
     print('-'*80)
 
     try:
-        with open(os.path.join(ACCEPTED, name)) as accepted:
+        with open(os.path.join(ACCEPTED, name), 'rb') as accepted:
             acclines = accepted.readlines()
     except EnvironmentError:
         acclines = []

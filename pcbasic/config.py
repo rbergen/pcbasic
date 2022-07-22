@@ -2,7 +2,7 @@
 PC-BASIC - config.py
 Configuration file and command-line options parser
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -274,8 +274,8 @@ ARGUMENTS = {
         ),
     },
     u'sound': {
-        u'type': u'string', u'default': u'',
-        u'choices': (u'', u'none', u'beep', u'portaudio', u'sdl2', u'interface'),
+        u'type': u'string', u'default': u'true',
+        u'choices': (u'true', u'false', u'none', u'beep', u'portaudio', u'sdl2', u'interface'),
     },
     u'load': {u'type': u'string', u'default': u'', },
     u'run': {u'type': u'string', u'default': u'',  },
@@ -586,7 +586,7 @@ class Settings(object):
             'hide_listing': self.get('hide-listing'),
             'hide_protected': self.get('hide-protected'),
             'allow_code_poke': self.get('allow-code-poke'),
-            'rebuild_offsets': not self.get('convert'),
+            'rebuild_offsets': not self.convert,
             # max available memory to BASIC (set by /m)
             'max_memory': min(max_list) or 65534,
             # maximum record length (-s)
@@ -805,7 +805,7 @@ class Settings(object):
                 iface_list = (interface,)
         iface_params = {
             'try_interfaces': iface_list,
-            'audio_override': self.get('sound') != 'interface' and self.get('sound'),
+            'audio_override': self.get('sound') not in ('true', 'interface') and self.get('sound'),
         }
         iface_params.update(self._get_video_parameters())
         iface_params.update(self._get_audio_parameters())
@@ -894,8 +894,8 @@ class Settings(object):
     def conv_params(self):
         """Get parameters for file conversion."""
         # conversion output
-        # first arg, if given, is mode; second arg, if given, is outfile
-        mode = self.get('convert')
+        # argument is mode
+        mode = self.get('convert', get_default=False)
         # keep uppercase first letter
         mode = mode[0].upper() if mode else 'A'
         name_in = (self.get(0) or self.get('run') or self.get('load'))
@@ -915,7 +915,7 @@ class Settings(object):
     @property
     def convert(self):
         """Converter operating mode."""
-        return self.get('convert')
+        return self.get('convert', get_default=False) is not None
 
     @property
     def debug(self):

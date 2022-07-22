@@ -2,7 +2,7 @@
 PC-BASIC test_console
 Tests for console
 
-(c) 2020--2021 Rob Hagemans
+(c) 2020--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -181,7 +181,7 @@ class ConsoleTest(TestCase):
         assert self.get_text_stripped(s) == [b'4'] + [b''] * 24
 
     def test_input_wrapping_line(self):
-        """Test ctrl-home in console."""
+        """Test input on top of an existing long line."""
         with Session() as s:
             s.press_keys(u'1\r')
             s.execute(b'cls:print "%s"' % (_LIPSUM[:200],))
@@ -192,7 +192,7 @@ class ConsoleTest(TestCase):
             )
 
     def test_close_stream(self):
-        """Test ctrl-home in console."""
+        """Test input stream."""
         with open(self.output_path(u'input.txt'), 'wb') as f:
             f.write(b'?1\r')
         input_stream = open(self.output_path(u'input.txt'), 'rb')

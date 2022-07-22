@@ -2,7 +2,7 @@
 PC-BASIC - error.py
 Error constants and exceptions
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -103,10 +103,13 @@ class Break(Interrupt):
 
     message = b'Break'
 
-    def __init__(self, stop=False):
+    def __init__(self, stop=False, pos=None):
         """Initialise break."""
         Interrupt.__init__(self)
         self.stop = stop
+        self.pos = pos
+        self.trapped_error_num = None
+        self.trapped_error_pos = None
 
 
 class BASICError(Interrupt):

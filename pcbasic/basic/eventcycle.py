@@ -2,7 +2,7 @@
 PC-BASIC - eventcycle.py
 Event queue handling
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -85,11 +85,12 @@ class EventQueues(object):
     max_video_qsize = 500
     max_audio_qsize = 20
 
-    def __init__(self, values, ctrl_c_is_break, inputs=None, video=None, audio=None):
+    def __init__(self, ctrl_c_is_break, inputs=None, video=None, audio=None):
         """Initialise; default is NullQueues."""
-        self._values = values
         # input signal handlers
         self._handlers = []
+        # basic event handlers
+        self._basic_handlers = ()
         # pause-key halts everything until another keypress
         self._pause = False
         # treat ctrl+c as break interrupt
@@ -121,12 +122,16 @@ class EventQueues(object):
         """Add an input handler."""
         self._handlers.append(handler)
 
+    def set_basic_event_handlers(self, event_check_input):
+        """Set the handlers for BASIC events."""
+        self._basic_handlers = tuple(event_check_input)
+
     def wait(self):
         """Wait and check events."""
         time.sleep(self.tick)
         self.check_events()
 
-    def check_events(self, event_check_input=()):
+    def check_events(self):
         """Main event cycle."""
         # sleep(0) is needed for responsiveness, e.g. even trapping in programs with tight loops
         # i.e. 100 goto 100 with event traps active)
@@ -135,9 +140,9 @@ class EventQueues(object):
         time.sleep(0)
         # bizarrely, we need sleep(0) twice. I don't know why.
         time.sleep(0)
-        self._check_input(event_check_input)
+        self._check_input()
 
-    def _check_input(self, event_check_input):
+    def _check_input(self):
         """Handle input events."""
         while True:
             # pop input queues
@@ -145,10 +150,11 @@ class EventQueues(object):
                 signal = self.inputs.get(False)
             except queue.Empty:
                 if self._pause:
+                    time.sleep(self.tick)
                     continue
                 else:
                     # we still need to handle basic events: not all are inputs
-                    for e in event_check_input:
+                    for e in self._basic_handlers:
                         e.check_input(signals.Event(None))
                     break
             self.inputs.task_done()
@@ -157,7 +163,7 @@ class EventQueues(object):
             # handle input events
             for handle_input in (
                     [self._handle_non_trappable_interrupts] +
-                    [e.check_input for e in event_check_input] +
+                    [e.check_input for e in self._basic_handlers] +
                     [self._handle_trappable_interrupts] +
                     [e.check_input for e in self._handlers]
                 ):

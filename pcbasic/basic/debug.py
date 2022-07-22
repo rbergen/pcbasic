@@ -2,7 +2,7 @@
 PC-BASIC - debug.py
 DEBUG statement and utilities
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -196,7 +196,7 @@ class DebugSession(api.Session):
     def showscreen(self):
         """Copy the screen buffer to the log."""
         for s in repr(self._impl.display.text_screen).split('\n'):
-            logging.debug(self._impl.codepage.bytes_to_unicode(s))
+            logging.debug(self._impl.codepage.bytes_to_unicode(s.encode('latin-1', 'ignore')))
 
     def showprogram(self):
         """Write a marked-up hex dump of the program to the log."""

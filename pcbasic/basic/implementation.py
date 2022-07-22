@@ -2,7 +2,7 @@
 PC-BASIC - implementation.py
 Top-level implementation and main interpreter loop
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 import io
@@ -113,9 +113,7 @@ class Implementation(object):
         self.codepage = cp.Codepage(codepage, box_protect)
         # set up input event handler
         # no interface yet; use dummy queues
-        self.queues = eventcycle.EventQueues(
-            self.values, ctrl_c_is_break, inputs=queue.Queue()
-        )
+        self.queues = eventcycle.EventQueues(ctrl_c_is_break, inputs=queue.Queue())
         # prepare I/O streams
         self.io_streams = iostreams.IOStreams(
             self.queues, self.codepage, input_streams, output_streams,
@@ -179,7 +177,7 @@ class Implementation(object):
         # register input event handlers
         ######################################################################
         # clipboard and print screen handler
-        self.queues.add_handler(basicevents.ScreenCopyHandler(
+        self.queues.add_handler(display.ScreenCopyHandler(
             self.queues, self.text_screen, self.files.lpt1_file
         ))
         # keyboard, pen and stick
@@ -188,7 +186,7 @@ class Implementation(object):
         self.queues.add_handler(self.stick)
         # set up BASIC event handlers
         self.basic_events = basicevents.BasicEvents(
-            self.values, self.sound, self.clock, self.files, self.program, num_fn_keys
+            self.sound, self.clock, self.files, self.program, num_fn_keys
         )
         ######################################################################
         # extensions
@@ -321,7 +319,7 @@ class Implementation(object):
                 else:
                     self._show_prompt()
                     # input loop, checks events
-                    line = self.console.read_line(from_start=True)
+                    line = self.console.read_line(is_input=False)
                     self._prompt = not self._store_line(line)
 
     def close(self):
@@ -334,14 +332,14 @@ class Implementation(object):
 
     def _show_prompt(self):
         """Show the Ok or EDIT prompt, unless suppressed."""
+        if self._prompt:
+            self.console.start_line()
+            self.console.write_line(b'Ok\xff')
         if self._edit_prompt:
             linenum, tell = self._edit_prompt
             # unset edit prompt first, in case program.edit throws
             self._edit_prompt = False
             self.program.edit(self.console, linenum, tell)
-        elif self._prompt:
-            self.console.start_line()
-            self.console.write_line(b'Ok\xff')
 
     def _store_line(self, line):
         """Store a program line or schedule a command line for execution."""
@@ -372,7 +370,7 @@ class Implementation(object):
                 prompt = numstr + b'*'
             else:
                 prompt = numstr + b' '
-            line = self.console.read_line(prompt, from_start=True)
+            line = self.console.read_line(prompt, is_input=False)
             # remove *, if present
             if line[:len(numstr)+1] == b'%s*' % (numstr,):
                 line = b'%s %s' % (numstr, line[len(numstr)+1:])
@@ -405,12 +403,20 @@ class Implementation(object):
         """Context guard to handle BASIC exceptions."""
         try:
             yield
-        except error.Break:
+        except error.Break as e:
+            # ctrl-break stops foreground and background sound
             self.sound.stop_all_sound()
-            self._prompt = False
+            if not self.interpreter.run_mode and not e.stop:
+                self._prompt = False
+            else:
+                self.interpreter.set_pointer(False)
+                # call _handle_error to write a message, etc.
+                self._handle_error(e)
+                # override position of syntax error
+                if e.trapped_error_num == error.STX:
+                    self._syntax_error_edit_prompt(e.trapped_error_pos)
         except error.BASICError as e:
             self._handle_error(e)
-            self._prompt = True
         except error.Exit:
             raise
 
@@ -421,13 +427,18 @@ class Implementation(object):
         self.console.write(e.get_message(self.program.get_line_number(e.pos)))
         self.interpreter.set_parse_mode(False)
         self.interpreter.input_mode = False
+        self._prompt = True
         # special case: syntax error
         if e.err == error.STX:
-            # for some reason, err is reset to zero by GW-BASIC in this case.
-            self.interpreter.error_num = 0
-            if e.pos is not None and e.pos != -1:
-                # line edit gadget appears
-                self._edit_prompt = (self.program.get_line_number(e.pos), e.pos+1)
+            self._syntax_error_edit_prompt(e.pos)
+
+    def _syntax_error_edit_prompt(self, pos):
+        """Show an EDIT prompt at the location of a syntax error."""
+        # for some reason, err is reset to zero by GW-BASIC in this case.
+        self.interpreter.error_num = 0
+        if pos is not None and pos != -1:
+            # line edit gadget appears
+            self._edit_prompt = (self.program.get_line_number(pos), pos+1)
 
     ###########################################################################
     # callbacks
@@ -550,7 +561,7 @@ class Implementation(object):
                 # and interruptible
                 self.queues.wait()
                 # LIST on screen is slightly different from just writing
-                self.console.list_line(l)
+                self.console.list_line(l, newline=True)
         # return to direct mode
         self.interpreter.set_pointer(False)
 
@@ -564,7 +575,8 @@ class Implementation(object):
         # throws back to direct mode
         # jump to end of direct line so execution stops
         self.interpreter.set_pointer(False)
-        # request edit prompt
+        # request edit prompt but no Ok prompt
+        self._prompt = False
         self._edit_prompt = (from_line, None)
 
     def auto_(self, args):
@@ -736,13 +748,15 @@ class Implementation(object):
             # readvar is a list of (name, indices) tuples
             # we return a list of (name, indices, values) tuples
             while True:
-                line = self.console.read_line(prompt, write_endl=newline)
+                line = self.console.read_line(prompt, write_endl=newline, is_input=True)
                 inputstream = InputTextFile(line)
                 # read the values and group them and the separators
                 var, values, seps = [], [], []
                 for name, indices in readvar:
                     name = self.memory.complete_name(name)
-                    word, sep = inputstream.input_entry(name[-1:], allow_past_end=True)
+                    word, sep = inputstream.input_entry(
+                        name[-1:], allow_past_end=True, suppress_unquoted_linefeed=False
+                    )
                     try:
                         value = self.values.from_repr(word, allow_nonnum=False, typechar=name[-1:])
                     except error.BASICError as e:
@@ -802,7 +816,7 @@ class Implementation(object):
         else:
             self.interpreter.input_mode = True
             self.parser.redo_on_break = True
-            line = self.console.read_line(prompt, write_endl=newline)
+            line = self.console.read_line(prompt, write_endl=newline, is_input=True)
             self.parser.redo_on_break = False
             self.interpreter.input_mode = False
         self.memory.set_variable(readvar, indices, self.values.from_value(line, values.STR))
@@ -816,7 +830,9 @@ class Implementation(object):
         else:
             # prompt for random seed if not specified
             while True:
-                seed = self.console.read_line(b'Random number seed (-32768 to 32767)? ')
+                seed = self.console.read_line(
+                    b'Random number seed (-32768 to 32767)? ', is_input=True
+                )
                 try:
                     val = self.values.from_repr(seed, allow_nonnum=False)
                 except error.BASICError as e:
