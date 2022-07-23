@@ -2,7 +2,7 @@
 PC-BASIC - console.py
 Console and interactive environment
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -108,17 +108,17 @@ class Console(object):
     ##########################################################################
     # interaction
 
-    def read_line(self, prompt=b'', write_endl=True, from_start=False):
+    def read_line(self, prompt=b'', write_endl=True, is_input=False):
         """Enter interactive mode and read string from console."""
         self.write(prompt)
         # disconnect the wrap between line with the prompt and previous line
         if self._text_screen.current_row > 1:
             self._text_screen.set_wrap(self._text_screen.current_row-1, False)
-        # from_start means direct entry mode, otherwise input mode
-        prompt_width = 0 if from_start else self._text_screen.current_col - 1
+        # read from start in direct entry mode, from prompt in input mode
+        prompt_width = 0 if not is_input else self._text_screen.current_col - 1
         try:
             # give control to user for interactive mode
-            prompt_row, left, right = self._interact(prompt_width)
+            prompt_row, left, right = self._interact(prompt_width, is_input=is_input)
         except error.Break:
             # x0E CR LF is printed to redirects at break
             self._io_streams.write(b'\x0e')
@@ -126,16 +126,14 @@ class Console(object):
             self.write_line()
             raise
         # get contents of the logical line
-        outstr = self._text_screen.get_logical_line(self._text_screen.current_row)
-        # if we're on the logical prompt row, only return the contents between left and right
-        if not from_start:
-            start_row = self._text_screen.find_start_of_line(self._text_screen.current_row)
-            # INPUT: the prompt starts at the beginning of a logical line
-            # but the row may have moved up: this happens on line 24
-            # in this case we need to move up to the start of the logical line
-            prompt_row == self._text_screen.find_start_of_line(prompt_row)
-            if start_row == prompt_row:
-                outstr = outstr[left-1:right-1]
+        if not is_input:
+            left, right = 1, None
+        else:
+            # we need *inclusive* bounds
+            right -= 1
+        outstr = self._text_screen.get_logical_line(
+            self._text_screen.current_row, furthest_left=left, furthest_right=right,
+        )
         # redirects output exactly the contents of the logical line
         # including any trailing whitespace and chars past 255
         self._io_streams.write(outstr)
@@ -146,9 +144,10 @@ class Console(object):
             self.write_line()
         # to the parser/INPUT, only the first 255 chars are returned
         # with trailing whitespace removed
-        return outstr[:255].rstrip(b' \t\n')
+        outstr = outstr[:255].rstrip(b' \t\n')
+        return outstr
 
-    def _interact(self, prompt_width):
+    def _interact(self, prompt_width, is_input=False):
         """Manage the interactive mode."""
         # force cursor visibility in all case
         self._cursor.set_override(True)
@@ -191,11 +190,15 @@ class Console(object):
                     self._text_screen.line_feed()
                 elif d == ea.ESCAPE:
                     # ESC, CTRL+[
-                    self._text_screen.clear_line(
-                        self._text_screen.current_row, furthest_left
-                    )
+                    logic_start = self._text_screen.find_start_of_line(self._text_screen.current_row)
+                    if logic_start == start_row:
+                        self._text_screen.clear_line(
+                            logic_start, furthest_left, quirky_scrolling=is_input
+                        )
+                    else:
+                        self._text_screen.clear_line(logic_start, 1)
                 elif d in (ea.CTRL_END, ea.CTRL_e):
-                    self._text_screen.clear_from(
+                    self._text_screen.clear_line(
                         self._text_screen.current_row, self._text_screen.current_col
                     )
                 elif d in (ea.UP, ea.CTRL_6):
@@ -245,7 +248,6 @@ class Console(object):
                             and self._text_screen.overflow
                         ):
                         furthest_right += 1
-
         finally:
             self._set_overwrite_mode(True)
             # reset cursor visibility
@@ -276,67 +278,63 @@ class Console(object):
         for c in iterchar(s):
             if c in b'\t\n\r\a\x0B\x0C\x1C\x1D\x1E\x1F':
                 # non-printing or position-dependent chars, dump buffer first
-                self._text_screen.write_chars(b''.join(out_chars), do_scroll_down=True)
+                self._text_screen.write_chars(b''.join(out_chars), do_scroll_down=False)
                 out_chars = []
                 row, col = self.current_row, self.current_col
                 if c == b'\t':
                     # TAB
                     num = (8 - (col - 1 - 8 * int((col-1) // 8)))
                     self._text_screen.write_chars(b' ' * num, do_scroll_down=False)
-                elif c == b'\n':
-                    # LF
-                    # exclude CR/LF
-                    if last != b'\r':
-                        # LF connects lines like word wrap
-                        self._text_screen.set_wrap(row, True)
-                        self._text_screen.set_pos(row + 1, 1, scroll_ok=True)
-                elif c == b'\r':
-                    # CR
-                    self._text_screen.set_wrap(row, False)
-                    self._text_screen.set_pos(row + 1, 1, scroll_ok=True)
+                elif c == b'\n' or c == b'\r':
+                    # CR or LF
+                    # note that a PRINTed LF chr$(10) does not cause a wrapped/connected line
+                    # in contrast to a typed Ctrl+J
+                    self._text_screen.newline(wrap=False)
                 elif c == b'\a':
                     # BEL
                     self._sound.beep()
                 elif c == b'\x0B':
                     # HOME
-                    self._text_screen.set_pos(1, 1, scroll_ok=True)
+                    self._text_screen.set_pos(1, 1, scroll_ok=False)
                 elif c == b'\x0C':
                     # CLS
                     self._text_screen.clear_view()
                 elif c == b'\x1C':
                     # RIGHT
-                    self._text_screen.set_pos(row, col + 1, scroll_ok=True)
+                    self._text_screen.set_pos(row, col + 1, scroll_ok=False)
                 elif c == b'\x1D':
                     # LEFT
-                    self._text_screen.set_pos(row, col - 1, scroll_ok=True)
+                    self._text_screen.set_pos(row, col - 1, scroll_ok=False)
                 elif c == b'\x1E':
                     # UP
-                    self._text_screen.set_pos(row - 1, col, scroll_ok=True)
+                    self._text_screen.set_pos(row - 1, col, scroll_ok=False)
                 elif c == b'\x1F':
                     # DOWN
-                    self._text_screen.set_pos(row + 1, col, scroll_ok=True)
+                    self._text_screen.set_pos(row + 1, col, scroll_ok=False)
             else:
                 # includes \b, \0, and non-control chars
                 out_chars.append(c)
             last = c
-        self._text_screen.write_chars(b''.join(out_chars), do_scroll_down=True)
+        self._text_screen.write_chars(b''.join(out_chars), do_scroll_down=False)
 
     def write_line(self, s=b'', do_echo=True):
         """Write a string to the screen and end with a newline."""
         self.write(b'%s\r' % (s,), do_echo)
 
-    def list_line(self, line, newline=True):
+    def list_line(self, line, newline):
         """Print a line from a program listing or EDIT prompt."""
         # no wrap if 80-column line, clear row before printing.
         # replace LF CR with LF
         line = line.replace(b'\n\r', b'\n')
         cuts = line.split(b'\n')
         for i, l in enumerate(cuts):
-            # clear_line looks back along wraps, use screen.clear_from instead
-            self._text_screen.clear_from(self._text_screen.current_row, 1)
+            if i > 0:
+                # echo
+                self._io_streams.write(b'\n')
+                # when using LIST, we *do* print LF as a wrap
+                self._text_screen.newline(wrap=True)
+            self._text_screen.clear_line(self._text_screen.current_row, 1)
             self.write(l)
-            if i != len(cuts) - 1:
-                self.write(b'\n')
         if newline:
             self.write_line()
         # remove wrap after 80-column program line

@@ -1,6 +1,6 @@
 <!--
     PC-BASIC documentation
-    Copyright (c) 2014-2021 Rob Hagemans
+    Copyright (c) 2014-2022 Rob Hagemans
     This work is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
     http://creativecommons.org/licenses/by-sa/4.0/legalcode
 -->
@@ -429,14 +429,11 @@
             <code><b>--font=</b><var>font_name</var>[<b>,</b><var>font_name</var> ... ]</code></dt>
         <dd>
             Use the specified fonts for the interface. The last fonts specified take precedence, previous ones are
-            fallback. Default is <code><b>unifont,univga,freedos</b></code> (i.e. the
-            <code>freedos</code> font has preference). The available fonts
+            fallback. The available fonts
             are stored in <code>font/</code>. By default, the following fonts are
             available:
             <ul class="compact">
-                <li><code><b>unifont</b></code></li>
-                <li><code><b>univga</b></code></li>
-                <li><code><b>freedos</b></code></li>
+                <li><code><b>default</b></code></li>
                 <li><code><b>cga</b></code></li>
                 <li><code><b>mda</b></code></li>
                 <li><code><b>vga</b></code></li>
@@ -444,6 +441,11 @@
                 <li><code><b>tandy1</b></code></li>
                 <li><code><b>tandy2</b></code></li>
             </ul>.
+
+            The font names <code>freedos</code>, <code>univga</code>, and <code>unifont</code>
+            are treated as synonyms of <code>default</code> unless a font with one of these names
+            is available. This behaviour is deprecated and these synonyms will be removed in a future version.
+
             See the <a href="#fonts">list of fonts</a> in the User's Guide for details.
         </dd>
 
@@ -510,17 +512,20 @@
                 <dt><code><b>cli</b></code></dt>
                 <dd>Command-line interface. Also <code><b><a href="#-b">-b</a></b></code>.</dd>
                 <dt><code><b>text</b></code></dt>
-                <dd>Text interface. Also <code><b><a href="#-t">-t</a></b></code>.</dd>
+                <dd>ANSI text interface. Also <code><b><a href="#-t">-t</a></b></code>.</dd>
                 <dt><code><b>graphical</b></code></dt>
-                <dd>Graphical interface.</dd>
-                <dt><code><b>sdl2</b></code></dt>
                 <dd>SDL2 graphical interface.</dd>
-                <dt><code><b>pygame</b></code></dt>
-                <dd>PyGame graphical interface <em>(deprecated, please use SDL2 instead)</em>.</dd>
+            </dl>
+            The following values for this option are deprecated:
+            <dl class="compact">
                 <dt><code><b>ansi</b></code></dt>
-                <dd>ANSI text interface.</dd>
+                <dd>ANSI text interface. Synonym for <code><b>text</b></code>.</dd>
+                <dt><code><b>sdl2</b></code></dt>
+                <dd>SDL2 graphical interface. Synonym for <code><b>graphical</b></code>.</dd>
+                <dt><code><b>pygame</b></code></dt>
+                <dd>PyGame graphical interface. Please use <code><b>graphical</b></code> instead.</dd>
                 <dt><code><b>curses</b></code></dt>
-                <dd>NCurses text interface.</dd>
+                <dd>NCurses text interface. Please use <code><b>text</b></code> instead.</dd>
             </dl>
             The default is <code><b>graphical</b></code>.
         </dd>
@@ -558,19 +563,17 @@
             <code><b>--lpt1=</b><var>type</var><b>:</b><var>value</var></code>
         </dt>
         <dd>
-            Attach a resource to the <code>LPT1:</code> parallel device.
+            Determine where the output goes when writing to the <code>LPT1:</code> parallel device.
             <code><var>type</var><b>:</b><var>value</var></code> can be
             <dl>
 
                 <dt><code><b>PRINTER:</b>[<var>printer_name</var>][<b>:</b><var>trigger</var>]</code></dt>
                 <dd>
-                    Connect to a Windows, LPR or CUPS printer. If
+                    Output is written to a printer. If
                     <code><var>printer_name</var></code> is not specified, the default
-                    printer is used. <br />
-                    The printer is activated when a file open to it is closed,
-                    a program terminates or PC-BASIC exits. Note that, unlike <code>LPT1:</code>,
-                    printers connected to <code>LPT2:</code> or <code>LPT3:</code>
-                    do <em>not</em> get activated when a program terminates.
+                    printer is used. Windows and CUPS printers are supported.<br />
+                    The printer will be activated when a file on <code>LPT1:</code is closed,
+                    when a BASIC program terminates or when PC-BASIC is closed.
                     If specified, <code><var>trigger</var></code> sets an additional trigger
                     to activate the printer:
                     <dl class="compact">
@@ -581,32 +584,33 @@
                         <dt><code><b>close</b></code>
                         <dd>No additional trigger</dd>
                     </dl>
-                    The default behaviour is that of <code><b>close</b></code>.
+                    The default is <code><b>close</b></code>.
                 </dd>
 
                 <dt><code><b>FILE:</b><var>file_name</var></code></dt>
                 <dd>
-                    Connect to any file or device such as
+                    Output is written to a file or character device such as
                     <code><b>/dev/stdout</b></code> on Unix or <code><b>LPT1</b></code> on Windows.
                 </dd>
 
                 <dt><code><b>STDIO:</b>[<b>CRLF</b>]</code></dt>
                 <dd>
-                    Connect to standard output of the calling shell.
+                    Output is written to the standard output of the calling shell.
                     If <code><b>CRLF</b></code> is specified, PC-BASIC replaces <code>CR</code>
                     characters with <code>LF</code> on its output. This is more intuitive on Unix shells.
                 </dd>
 
                 <dt><code><b>PARPORT:</b><var>port_number</var></code></dt>
                 <dd>
-                    Connect to a Centronics parallel port, where <code><var>port_number</var></code>
+                    Output is written to a Centronics parallel port, where <code><var>port_number</var></code>
                     is <code><b>0</b></code> for the first parallel port, etc.
-                    <code><b>PARPORT</b></code> only works with physical parallel ports; for example, a Windows printer or other
-                    device mapped with <code>NET USE LPT1:</code> can only be attached with <code><b>FILE:LPT1</b></code>
+                    This option only works with physical parallel ports. To write to a Windows printer or other
+                    device mapped with <code>NET USE LPT1:</code>, use <code><b>FILE:LPT1</b></code> instead.
                 </dd>
 
             </dl>
-            If this option is not specified, <code>LPT1:</code> is connected to the default printer.
+            The default is <code><b>PRINTER:</b></code>, so that output goes to the default printer
+            specified by the operating system.
         </dd>
 
         <dt id="--lpt2">
@@ -615,6 +619,9 @@
         <dd>
             Attach a resource to the <code>LPT2:</code> parallel device.
             See <code><b><a href="#--lpt1">--lpt1</a></b></code>.
+            Note that, unlike <code>LPT1:</code>, printers connected to <code>LPT2:</code>
+            do <em>not</em> get activated when a program terminates.
+
             If this option is not specified, <code>LPT2:</code> is unavailable.
         </dd>
 
@@ -624,6 +631,9 @@
         <dd>
             Attach a resource to the <code>LPT3:</code> parallel device.
             See <code><b><a href="#--lpt1">--lpt1</a></b></code>.
+            Note that, unlike <code>LPT1:</code>, printers connected to <code>LPT3:</code>
+            do <em>not</em> get activated when a program terminates.
+
             If this option is not specified, <code>LPT3:</code> is unavailable.
         </dd>
 
@@ -878,16 +888,27 @@
             Choose the sound engine to use.
             Not all sound engines will be available on all systems.
             <dl class="compact">
-                <dt><code><b>none</b></code></dt>
+                <dt><code><b>false</b></code></dt>
                 <dd>Suppress sound output.</dd>
+                <dt><code><b>true</b></code></dt>
+                <dd>Output sound, if a sound driver is available for the interface.</dd>
+            </dl>
+
+            Default is <code><b>interface</b></code>.
+
+            The following values for this option are deprecated; PortAudio will be used by default
+            in the text-based interfaces:
+            <dl class="compact">
+                <dt><code><b>none</b></code></dt>
+                <dd>Suppress sound output. <em>(Use <code><b>false</b></code> instead)</em></dd>
+                <dt><code><b>interface</b></code>  <em>(Use <code><b>true</b></code> instead</dt>
+                <dd>Use the native sound engine of the interface, if available.</dd>
                 <dt><code><b>beep</b></code></dt>
                 <dd>Use the built-in speaker.</dd>
                 <dt><code><b>portaudio</b></code></dt>
                 <dd>Use the PortAudio sound generator.</dd>
-                <dt><code><b>interface</b></code></dt>
-                <dd>Use the native sound engine of the interface, if available.</dd>
             </dl>
-            Default is <code><b>interface</b></code>.
+
         </dd>
 
         <dt id="--state">
@@ -969,7 +990,7 @@
             Set the text encoding to UTF-8.
             <br />
             This option is <em>deprecated</em> and ignored if <code>--text-encoding</code> is set.
-            Use <code><b><a href="#--text-encoding">--text-encoding</a></b></code> instead.
+            Use <code><b><a href="#--text-encoding">--text-encoding</a>=utf-8</b></code> instead.
         </dd>
 
         <dt id="--version">

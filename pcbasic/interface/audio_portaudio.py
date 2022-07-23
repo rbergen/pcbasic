@@ -2,7 +2,7 @@
 PC-BASIC - interface.audio_portaudio
 Sound interface based on PortAudio
 
-(c) 2015--2021 Rob Hagemans
+(c) 2015--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -15,7 +15,7 @@ if False:
     # for detection by packagers
     import pyaudio
 
-from ..compat import zip, WIN32
+from ..compat import zip, WIN32, MACOS
 from .audio import AudioPlugin
 from .base import audio_plugins, InitFailed
 from . import synthesiser
@@ -30,7 +30,7 @@ _BUFSIZE = 1024
 
 # suppress ALSA debug messages
 # https://stackoverflow.com/questions/7088672/pyaudio-working-but-spits-out-error-messages-each-time
-if WIN32:
+if WIN32 or MACOS:
     @contextmanager
     def _quiet_alsa(): yield
 else:
@@ -54,6 +54,8 @@ else:
 
 
 
+@audio_plugins.register('ansi')
+@audio_plugins.register('cli')
 @audio_plugins.register('portaudio')
 class AudioPortAudio(AudioPlugin):
     """SDL2-based audio plugin."""

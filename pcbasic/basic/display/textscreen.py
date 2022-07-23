@@ -2,7 +2,7 @@
 PC-BASIC - display.textscreen
 Text operations
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -96,9 +96,8 @@ class BottomBar(object):
 class TextScreen(object):
     """Text screen."""
 
-    def __init__(self, queues, values, mode, cursor, capabilities):
+    def __init__(self, values, mode, cursor, capabilities):
         """Initialise text-related members."""
-        self._queues = queues
         self._values = values
         self._tandytext = capabilities in ('pcjr', 'tandy')
         # cursor
@@ -119,6 +118,7 @@ class TextScreen(object):
         self._vpagenum = 0
         self._pages = None
         self._apage = None
+        self._locked = False
 
     def init_mode(
             self, mode, pages, attr, vpagenum, apagenum,
@@ -164,46 +164,51 @@ class TextScreen(object):
 
     def write_chars(self, chars, do_scroll_down):
         """Put one character at the current position."""
-        with self._apage.collect_updates():
+        with self.collect_updates():
             for char in iterchar(chars):
                 self.write_char(char, do_scroll_down)
-        self._move_cursor(self.current_row, self.current_col)
 
-    def write_char(self, char, do_scroll_down=False):
+    def write_char(self, char, do_scroll_down):
         """Put one character at the current position."""
-        # check if scroll & repositioning needed
-        if self.overflow:
-            self.current_col += 1
-            self.overflow = False
         # see if we need to wrap and scroll down
-        self._check_wrap(do_scroll_down)
+        self._consume_overflow_before_write(do_scroll_down)
         # move cursor and see if we need to scroll up
-        self._update_cursor_position(scroll_ok=True)
+        self._wrap_around_and_scroll_as_needed(scroll_ok=True)
+        self._refresh_cursor()
         # put the character
         self._apage.put_char_attr(
             self.current_row, self.current_col, char, self._attr, adjust_end=True
         )
         # move cursor. if on col 80, only move cursor to the next row
-        # when the char is printed
+        # when the char is printed, except if the row already wraps into the next one
         if self.current_col < self.mode.width:
             self.current_col += 1
+        elif self.wraps(self.current_row):
+            self.current_row += 1
+            self.current_col = 1
         else:
             self.overflow = True
         # move cursor and see if we need to scroll up
-        self._update_cursor_position(scroll_ok=True)
+        self._wrap_around_and_scroll_as_needed(scroll_ok=True)
+        self._refresh_cursor()
 
-    def _check_wrap(self, do_scroll_down):
-        """Wrap if we need to."""
+    def _consume_overflow_before_write(self, do_scroll_down):
+        """Move from overflow position to next line and set wrap flag, scroll down if needed."""
+        if self.overflow:
+            self.current_col += 1
+            self.overflow = False
         if self.current_col > self.mode.width:
             if self.current_row < self.mode.height:
-                if do_scroll_down:
-                    # scroll down (make space by shifting the next rows down)
-                    if self.current_row < self.scroll_area.bottom:
-                        self.scroll_down(self.current_row+1)
-                # wrap line
-                self.set_wrap(self.current_row, True)
+                if not self.wraps(self.current_row):
+                    if do_scroll_down:
+                        # scroll down (make space by shifting the next rows down)
+                        if self.current_row < self.scroll_area.bottom:
+                            self.scroll_down(self.current_row+1)
+                    # wrap line
+                    self.set_wrap(self.current_row, True)
                 # move cursor and reset cursor attribute
-                self._move_cursor(self.current_row + 1, 1)
+                self.current_row, self.current_col = self.current_row + 1, 1
+                self._refresh_cursor()
             else:
                 self.current_col = self.mode.width
 
@@ -235,15 +240,23 @@ class TextScreen(object):
         """Move the current position 1 row down."""
         self.set_pos(self.current_row + 1, self.current_col, scroll_ok=False)
 
-    def incr_pos(self):
+    def incr_pos(self, force_halfwidth=False):
         """Increase the current position by a char width."""
-        step = self._apage.get_charwidth(self.current_row, self.current_col)
-        # on a trail byte: go just one to the right
-        step = step or 1
+        if self.overflow or force_halfwidth:
+            # if we're in overflow, there's no character yet. So it's halfwidth by default.
+            step = 1
+        else:
+            step = self._apage.get_charwidth(self.current_row, self.current_col)
+            # on a trail byte: go just one to the right
+            step = step or 1
         self.set_pos(self.current_row, self.current_col + step, scroll_ok=False)
 
     def decr_pos(self):
         """Decrease the current position by a char width."""
+        # apply overflow to column number
+        if self.overflow:
+            self.current_col += 1
+            self.overflow = False
         # check width of cell to the left
         width = self._apage.get_charwidth(self.current_row, self.current_col-1)
         # previous is trail byte: go two to the left
@@ -267,22 +280,25 @@ class TextScreen(object):
 
     def set_pos(self, to_row, to_col, scroll_ok=True):
         """Set the current position."""
-        self.overflow = False
+        # overflow status is maintained under up or down movements
+        # e.g. if we print a char while on col 80, we end up in overflow position.
+        # down-error from there gets us to overflow position on the next row.
+        if to_col < self.mode.width:
+            self.overflow = False
         self.current_row, self.current_col = to_row, to_col
         # move cursor and reset cursor attribute
         # this may alter self.current_row, self.current_col
-        self._update_cursor_position(scroll_ok)
+        self._wrap_around_and_scroll_as_needed(scroll_ok)
+        self._refresh_cursor()
 
-    def _update_cursor_position(self, scroll_ok=True):
+    def _wrap_around_and_scroll_as_needed(self, scroll_ok):
         """Check if we have crossed the screen boundaries and move as needed."""
-        oldrow, oldcol = self.current_row, self.current_col
         if self._bottom_row_allowed:
             if self.current_row == self.mode.height:
                 self.current_col = min(self.mode.width, self.current_col)
                 if self.current_col < 1:
                     self.current_col += 1
-                self._move_cursor(self.current_row, self.current_col)
-                return self.current_col == oldcol
+                return
             else:
                 # if row > height, we also end up here
                 # (eg if we do INPUT on the bottom row)
@@ -311,26 +327,33 @@ class TextScreen(object):
             self.current_row = self.scroll_area.bottom
         elif self.current_row < self.scroll_area.top:
             self.current_row = self.scroll_area.top
-        self._move_cursor(self.current_row, self.current_col)
 
-    def _move_cursor(self, row, col):
-        """Move the cursor to a new position."""
-        self.current_row, self.current_col = row, col
+    @contextmanager
+    def collect_updates(self):
+        """Lock cursor to collect updates and submit them in one go."""
+        save, self._locked = self._locked, True
+        try:
+            with self._apage.collect_updates():
+                yield
+        finally:
+            self._locked = save
+            self._refresh_cursor()
+
+    def _refresh_cursor(self):
+        """Move the cursor to the current position and update its attributes."""
+        if self._locked:
+            return
+        row, col = self.current_row, self.current_col
         # in text mode, set the cursor width and attriute to that of the new location
         if self.mode.is_text_mode:
             # set halfwidth/fullwidth cursor
             width = self._apage.get_charwidth(row, col)
             # set the cursor attribute
             attr = self._apage.get_attr(row, col)
-            # FIXME: private access
-            if not self._apage._locked:
-                self._cursor.move(row, col, attr, width)
+            self._cursor.move(row, col, attr, width)
         else:
-            # FIXME: private access
-            if not self._apage._locked:
-                # move the cursor
-                self._cursor.move(row, col)
-
+            # move the cursor
+            self._cursor.move(row, col)
 
     ###########################################################################
     # clearing the screen
@@ -345,7 +368,6 @@ class TextScreen(object):
         """Clear the screen."""
         with self._modify_attr_on_clear():
             self._apage.clear_rows(1, self.mode.height, self._attr)
-            # TODO: force submit on queue
             self.set_pos(1, 1)
 
     @contextmanager
@@ -370,14 +392,16 @@ class TextScreen(object):
             from_row = self.scroll_area.top
         self._apage.scroll_up(from_row, self.scroll_area.bottom, self._attr)
         if self.current_row > from_row:
-            self._move_cursor(self.current_row - 1, self.current_col)
+            self.current_row -= 1
+            self._refresh_cursor()
 
 
     def scroll_down(self, from_row):
         """Scroll the scroll region down by one row, starting at from_row."""
         self._apage.scroll_down(from_row, self.scroll_area.bottom, self._attr)
         if self.current_row >= from_row:
-            self._move_cursor(self.current_row + 1, self.current_col)
+            self.current_row += 1
+            self._refresh_cursor()
 
 
     ###########################################################################
@@ -403,12 +427,11 @@ class TextScreen(object):
         """Delete the character (half/fullwidth) at the current position."""
         width = self._apage.get_charwidth(self.current_row, self.current_col)
         # on a halfwidth char, delete once; lead byte, delete twice; trail byte, do nothing
-        with self._apage.collect_updates():
+        with self.collect_updates():
             if width > 0:
                 self._delete_at(self.current_row, self.current_col)
             if width == 2:
                 self._delete_at(self.current_row, self.current_col)
-        self._move_cursor(self.current_row, self.current_col)
 
     def _delete_at(self, row, col, remove_depleted=False):
         """Delete the halfwidth character at the given position."""
@@ -468,15 +491,14 @@ class TextScreen(object):
 
     def insert_fullchars(self, sequence):
         """Insert one or more half- or fullwidth characters and adjust cursor."""
-        # insert one at a time at cursor location
+        # insert one halfwidth character at a time at cursor location
         # to let cursor position logic deal with scrolling
-        with self._apage.collect_updates():
+        with self.collect_updates():
             for c in iterchar(sequence):
                 if self._insert_at(self.current_row, self.current_col, c, self._attr):
-                    # move cursor by one character
+                    # move cursor by one halfwidth character
                     # this will move to next row when necessary
-                    self.incr_pos()
-        self._move_cursor(self.current_row, self.current_col)
+                    self.incr_pos(force_halfwidth=True)
 
     def _insert_at(self, row, col, c, attr):
         """Insert one halfwidth character at the given position."""
@@ -546,19 +568,27 @@ class TextScreen(object):
 
     # console calls
 
-    def clear_line(self, the_row, from_col=1):
-        """Clear whole logical line (ESC), leaving prompt."""
-        self.clear_from(self.find_start_of_line(the_row), from_col)
-
-    def clear_from(self, srow, scol):
-        """Clear from given position to end of logical line (CTRL+END)."""
-        end_row = self.find_end_of_line(srow)
+    def clear_line(self, start_row, start_col, quirky_scrolling=False):
+        """Clear from given position to end of logical line (CTRL+END, ESC)."""
+        end_row = self.find_end_of_line(start_row)
         # clear the first row of the logical line
-        self._apage.clear_row_from(srow, scol, self._attr)
+        self._apage.clear_row_from(start_row, start_col, self._attr)
+        # input anomaly: when interacting with INPUT and ESC is pressed,
+        # the first line gets cleared but not scrolled
+        if quirky_scrolling and end_row > start_row:
+            self._apage.clear_row_from(start_row+1, 1, self._attr)
+            scroll_row = start_row + 1
+        else:
+            scroll_row = start_row
         # remove the additional rows in the logical line by scrolling up
-        for row in range(end_row, srow, -1):
+        for row in range(end_row, scroll_row, -1):
             self.scroll(row)
-        self.set_pos(srow, scol)
+        self.set_pos(start_row, start_col)
+
+    def newline(self, wrap):
+        """Write a newline with or without wrap."""
+        self.set_wrap(self.current_row, wrap)
+        self.set_pos(self.current_row + 1, 1, scroll_ok=True)
 
     def backspace(self, prompt_row, furthest_left):
         """Delete the char to the left (BACKSPACE)."""
@@ -671,14 +701,13 @@ class TextScreen(object):
         else:
             reverse_attr = 0x07
         if self._bottom_bar.visible:
-            with self._apage.collect_updates():
+            with self.collect_updates():
                 # always show only complete 8-character cells
                 # this matters on pcjr/tandy width=20 mode
                 for col in range((self.mode.width//8) * 8):
                     char, reverse = self._bottom_bar.get_char_reverse(col)
                     attr = reverse_attr if reverse else self._attr
                     self._apage.put_char_attr(key_row, col+1, char, attr)
-            #self._move_cursor(self.current_row, self.current_col)
             self.set_row_length(self.mode.height, self.mode.width)
 
     ###########################################################################
@@ -689,7 +718,12 @@ class TextScreen(object):
         """Get all characters on the visible page, as tuple of tuples of bytes (raw) or unicode (dbcs)."""
         return self._pages[self._vpagenum].get_chars(as_type=as_type)
 
-    def get_text(self, start_row=None, stop_row=None, pagenum=None, wrap=True, as_type=text_type):
+    def get_text(
+            self,
+            start_row=1, start_col=1, stop_row=None, stop_col=None,
+            pagenum=None, wrap=True, as_type=text_type,
+            stop_col_first=None
+        ):
         """
         Retrieve consecutive rows of text on page `pagenum`,
         as tuple of bytes (raw) / tuple of unicode (dbcs).
@@ -701,15 +735,36 @@ class TextScreen(object):
             pagenum = self._vpagenum
         page = self._pages[pagenum]
         chars = page.get_chars(as_type)
-        if start_row is None:
-            start_row = 1
         if stop_row is None:
             stop_row = len(chars)
-        output = tuple(
-            as_type().join(_charrow[:page.row_length(_row0 + 1)])
-            for _row0, _charrow in enumerate(chars)
-            if start_row <= _row0 + 1 <= stop_row
-        )
+        # get the rows of separate chars
+        rows = [
+            _charrow[:page.row_length(_row1)]
+            for _row1, _charrow in enumerate(chars, start=1)
+            if start_row <= _row1 <= stop_row
+        ]
+        # if a row is not complete and wraps, it has a \n
+        if as_type == bytes:
+            lf = (b'\n',)
+        else:
+            lf = ('\n',)
+        rows = [
+            _charrow + lf if page.has_linefeed(_row1) else _charrow
+            for _row1, _charrow in enumerate(rows, start=start_row)
+        ]
+        if stop_col is None:
+            stop_col = len(rows[-1])
+        if stop_col_first is None:
+            stop_col_first = len(rows[0])
+        # apply start and stop column (inclusive bounds, base-1)
+        if start_row == stop_row:
+            rows[0] = rows[0][start_col-1:min(stop_col, stop_col_first)]
+        else:
+            # don't apply stop_col_first / furthest_right if we have multiple rows
+            rows[0] = rows[0][start_col-1:]
+            rows[-1] = rows[-1][:stop_col]
+        # join the characters in each row
+        output = tuple(as_type().join(_row) for _row in rows)
         if wrap:
             prev_wraps = [False] + list(
                 page.wraps(_row)
@@ -725,15 +780,16 @@ class TextScreen(object):
             output = tuple(wrapped_output)
         return output
 
-    def get_logical_line(self, from_row, as_type=bytes):
+    def get_logical_line(self, from_row, as_type=bytes, furthest_left=1, furthest_right=None):
         """Get the contents of the logical line on the active page, as one bytes string."""
         # find start and end of logical line
-        start_row = self.find_start_of_line(from_row)
-        stop_row = self.find_end_of_line(from_row)
-        line = as_type().join(
-            self.get_text(start_row, stop_row, pagenum=self._apagenum, as_type=bytes)
+        rowtuple = self.get_text(
+            start_row=self.find_start_of_line(from_row),
+            start_col=furthest_left, stop_col_first=furthest_right,
+            stop_row=self.find_end_of_line(from_row),
+            pagenum=self._apagenum, as_type=as_type
         )
-        return line
+        return as_type().join(rowtuple)
 
     ###########################################################################
     # text screen callbacks
@@ -833,4 +889,5 @@ class TextScreen(object):
             self.scroll_area.set(start, stop)
             #set_pos(start, 1)
             self.overflow = False
-            self._move_cursor(start, 1)
+            self.current_row, self.current_col = start, 1
+            self._refresh_cursor()

@@ -2,7 +2,7 @@
 PC-BASIC - clipboard.py
 Clipboard handling
 
-(c) 2013--2021 Rob Hagemans
+(c) 2013--2022 Rob Hagemans
 This file is released under the GNU GPL version 3 or later.
 """
 
@@ -33,7 +33,7 @@ class Clipboard(object):
 
 
 class MacClipboard(Clipboard):
-    """Clipboard handling for OSX."""
+    """Clipboard handling for OSX. Deprecated, used only by PyGame interface."""
 
     def paste(self):
         """Get unicode text from clipboard."""
