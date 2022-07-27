@@ -26,7 +26,7 @@ class CodepageTest(TestCase):
         cp_936 = read_codepage('936')
         with Session(
                 codepage=cp_936, box_protect=False, textfile_encoding='utf-8',
-                devices={'c': self.output_path()},
+                devices={'c': {'path': self.output_path()}},
                 enabled_writes=['disk'],
             ) as s:
             s.execute('open "c:boxtest.txt" for output as 1')
@@ -48,7 +48,7 @@ class CodepageTest(TestCase):
         cp_936 = read_codepage('936')
         with Session(
                 codepage=cp_936, box_protect=True, textfile_encoding='utf-8',
-                devices={'c': self.output_path()},
+                devices={'c': {'path': self.output_path()}},
                 enabled_writes=['disk'],
             ) as s:
             # to file
@@ -111,7 +111,7 @@ class CodepageTest(TestCase):
                 f.write(hi)
             cp_dict = read_codepage(cp)
             with Session(
-                    codepage=cp_dict, textfile_encoding='utf-8', devices={'c': self.output_path()},
+                    codepage=cp_dict, textfile_encoding='utf-8', devices={'c': {'path': self.output_path()}},
                 ) as s:
                 s.execute(u'cls:print "{}"'.format(hi))
 

@@ -23,59 +23,59 @@ class DiskTest(TestCase):
     def test_text(self):
         """Save and load in plaintext to a file."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:
             s.execute('10 A%=1234')
             s.execute('save "prog",A')
-        with Session(devices={b'A': self.output_path()}, current_device='A:') as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, current_device='A:') as s:
             s.execute('run "prog"')
             assert s.get_variable('A%') == 1234
 
     def test_binary(self):
         """Save and load in binary format to a file."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:
             s.execute('10 A%=1234')
             s.execute('save "prog"')
-        with Session(devices={b'A': self.output_path()}, current_device='A:') as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, current_device='A:') as s:
             s.execute('run "prog"')
             assert s.get_variable('A%') == 1234
 
     def test_protected(self):
         """Save and load in protected format to a file."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:
             s.execute('10 A%=1234')
             s.execute('save "prog", P')
-        with Session(devices={b'A': self.output_path()}, current_device='A:') as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, current_device='A:') as s:
             s.execute('run "prog"')
             assert s.get_variable('A%') == 1234
 
     def test_text_letter(self):
         """Save and load in plaintext to a file, explicit drive letter."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:
             s.execute('10 A%=1234')
             s.execute('save "A:prog",A')
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('run "A:prog"')
             assert s.get_variable('A%') == 1234
 
     def test_files(self):
         """Test directory listing, current directory and free space report."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:
@@ -90,7 +90,7 @@ class DiskTest(TestCase):
             assert output[2].endswith(b' Bytes free')
             # empty line between files and next output
             assert output[3:5] == [b'', b'##']
-        with Session(devices={b'A': self.output_path()}, current_device='A:') as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, current_device='A:') as s:
             s.execute('files')
             output = [_row.strip() for _row in self.get_text(s)]
             assert output[:2] == [
@@ -104,7 +104,7 @@ class DiskTest(TestCase):
         open(longname, 'w').close()
         shortname = get_short_pathname(longname) or 'very_lo+.ex+'
         shortname = os.path.basename(shortname).encode('latin-1')
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('files "A:"')
             output = [_row.strip() for _row in self.get_text(s)]
             assert output[:2] == [
@@ -121,7 +121,7 @@ class DiskTest(TestCase):
         open(longname, 'w').close()
         shortname = get_short_pathname(longname) or 'aa_long+.txt'
         shortname = os.path.basename(shortname).encode('latin-1')
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('files "A:*.txt"')
             output = [_row.strip() for _row in self.get_text(s)]
         # output order is defined by OS, may not be alphabetic
@@ -129,13 +129,13 @@ class DiskTest(TestCase):
         assert b'AAB     .TXT' in output[1]
         assert b'ABC     .TXT' in output[1]
         assert shortname in output[1]
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('files "A:aa?.txt"')
             output = [_row.strip() for _row in self.get_text(s)]
         assert b'AAA     .TXT' in output[1]
         assert b'AAB     .TXT' in output[1]
         # no match
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('files "A:b*.txt"')
             output = [_row.strip() for _row in self.get_text(s)]
         assert output[1] == b'File not found\xff'
@@ -143,7 +143,7 @@ class DiskTest(TestCase):
     def test_internal_disk_files(self):
         """Test directory listing, current directory and free space report on special @: disk."""
         with Session(
-            devices={b'@': self.output_path()},
+            devices={b'@': {'path': self.output_path()}},
             enabled_writes=['save'],
             ) as s:
             s.execute('save "@:prog",A')
@@ -174,12 +174,12 @@ class DiskTest(TestCase):
     def test_disk_data(self):
         """Write and read data to a text file."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "a:data" for output as 1')
             s.execute('print#1, 1234')
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('open "a:data" for input as 1')
             s.execute('input#1, A%')
             assert s.get_variable('A%') == 1234
@@ -187,7 +187,7 @@ class DiskTest(TestCase):
     def test_disk_data_utf8(self):
         """Write and read data to a text file, utf-8 encoding."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             textfile_encoding='utf-8',
             enabled_writes=['disk'],
             ) as s:
@@ -198,7 +198,7 @@ class DiskTest(TestCase):
         with open(self.output_path('DATA'), 'rb') as f:
             assert f.read() == b'\xef\xbb\xbf\xc2\xa3\r\n\x1a'
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             textfile_encoding='utf-8',
             enabled_writes=['disk'],
             ) as s:
@@ -211,7 +211,7 @@ class DiskTest(TestCase):
         """Write and read data to a text file, soft and hard linefeed."""
         with open(self.output_path('DATA'), 'wb') as f:
             f.write(b'a\nb\r\nc')
-        with Session(devices={b'A': self.output_path()}, soft_linefeed=True) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, soft_linefeed=True) as s:
             s.execute('open "a:data" for input as 1')
             s.execute('line input#1, a$')
             s.execute('line input#1, b$')
@@ -219,7 +219,7 @@ class DiskTest(TestCase):
         assert s.get_variable('A$') == b'a\nb'
         assert s.get_variable('B$') == b'c'
         assert s.get_variable('C$') == b''
-        with Session(devices={b'A': self.output_path()}, soft_linefeed=False) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, soft_linefeed=False) as s:
             s.execute('open "a:data" for input as 1')
             s.execute('line input#1, a$')
             s.execute('line input#1, b$')
@@ -231,18 +231,18 @@ class DiskTest(TestCase):
     def test_disk_data_append(self):
         """Append data to a text file."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "a:data" for output as 1')
             s.execute('print#1, 1234')
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "a:data" for append as 1')
             s.execute('print#1, "abcde"')
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('open "a:data" for input as 1')
             s.execute('line input#1, a$')
             s.execute('line input#1, b$')
@@ -252,7 +252,7 @@ class DiskTest(TestCase):
     def test_disk_random(self):
         """Write and read data to a random access file."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "a:data" for random as 1')
@@ -261,7 +261,7 @@ class DiskTest(TestCase):
             s.execute('print#1, 1234')
             s.execute('put#1, 1')
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "a:data" for random as 1')
@@ -275,12 +275,12 @@ class DiskTest(TestCase):
         # this will be case sensitive on some platforms but should be picked up correctly anyway
         open(self.output_path('MixCase.txt'), 'w').close()
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "a:mixcase.txt" for output as 1')
             s.execute('print#1, 1234')
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             s.execute('open "a:MIXCASE.TXT" for input as 1')
             s.execute('input#1, A%')
             assert s.get_variable('A%') == 1234
@@ -293,7 +293,7 @@ class DiskTest(TestCase):
         # this will be case sensitive on some platforms but should be picked up correctly anyway
         open(self.output_path(u'MY\xc2\xa30.02'), 'w').close()
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             # non-ascii not allowed - cp437 &h9c is pound sign
@@ -306,7 +306,7 @@ class DiskTest(TestCase):
     def test_name_illegal_chars(self):
         """Test non-matching of names that are not ascii."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['disk'],
             ) as s:
@@ -320,7 +320,7 @@ class DiskTest(TestCase):
     def test_name_slash(self):
         """Test non-matching of names with forward slash."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['disk'],
             ) as s:
@@ -333,7 +333,7 @@ class DiskTest(TestCase):
     def test_unavailable_drive(self):
         """Test attempt to access unavailable drive letter."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             # drive b: not mounted
@@ -346,7 +346,7 @@ class DiskTest(TestCase):
         os.mkdir(self.output_path('a'))
         os.mkdir(self.output_path('a', 'B'))
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['disk'],
             ) as s:
@@ -370,7 +370,7 @@ class DiskTest(TestCase):
     def test_directory_ops(self):
         """Test directory operations."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['disk'],
             ) as s:
@@ -391,7 +391,7 @@ class DiskTest(TestCase):
         open(self.output_path('delete2.txt'), 'w').close()
         open(self.output_path('delete3'), 'w').close()
         with Session(
-            devices={b'A': self.output_path(), b'B': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}, b'B': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['disk'],
             ) as s:
@@ -424,7 +424,7 @@ class DiskTest(TestCase):
     def test_files_cwd(self):
         """Test directory listing, not on root."""
         os.mkdir(self.output_path('a'))
-        with Session(devices={b'A': self.output_path()}, current_device='A:') as s:
+        with Session(devices={b'A': {'path': self.output_path()}}, current_device='A:') as s:
             s.execute('chdir "a"')
             s.execute('files')
             s.execute('files ".."')
@@ -452,20 +452,20 @@ class DiskTest(TestCase):
     def test_mount_dict_spec(self):
         """Test mount dict specification."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "A:test" for output as 1: print#1, 42: close 1')
         # lowercase
-        with Session(devices={b'a': self.output_path()}) as s:
+        with Session(devices={b'a': {'path': self.output_path()}}) as s:
             s.execute('open "A:test" for input as 1: input#1, A%')
             assert s.get_variable('A%') == 42
         # with :
-        with Session(devices={b'A:': self.output_path()}) as s:
+        with Session(devices={b'A:': {'path': self.output_path()}}) as s:
             s.execute('open "A:test" for input as 1: input#1, A%')
             assert s.get_variable('A%') == 42
         # unicode
-        with Session(devices={u'a:': self.output_path()}) as s:
+        with Session(devices={u'a:': {'path': self.output_path()}}) as s:
             s.execute('open "A:test" for input as 1: input#1, A%')
             assert s.get_variable('A%') == 42
 
@@ -479,14 +479,14 @@ class DiskTest(TestCase):
             output = [_row.strip() for _row in self.get_text(s)]
         assert output[0] == b'Path not found\xff'
         with Session(
-            devices={b'\0': self.output_path()},
+            devices={b'\0': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "A:test" for output as 1: print#1, 42: close 1')
             output = [_row.strip() for _row in self.get_text(s)]
         assert output[0] == b'Path not found\xff'
         with Session(
-            devices={b'\xc4': self.output_path()},
+            devices={b'\xc4': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "A:test" for output as 1: print#1, 42: close 1')
@@ -496,41 +496,41 @@ class DiskTest(TestCase):
     def test_bad_current(self):
         """Test bad current device."""
         with Session(
-            devices={'A': self.output_path(), 'Z': None}, 
+            devices={'A': {'path': self.output_path()}, 'Z': None}, 
             current_device='B',
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "test" for output as 1: print#1, 42: close 1')
         assert os.path.isfile(self.output_path('TEST'))
         with Session(
-            devices={'A': self.output_path(), 'Z': None}, 
+            devices={'A': {'path': self.output_path()}, 'Z': None}, 
             current_device='#',
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "test2" for output as 1: print#1, 42: close 1')
         assert os.path.isfile(self.output_path('TEST2'))
 
-    def test_bytes_mount(self):
-        """Test specifying mount dir as bytes."""
-        with Session(
-            devices={'A': self.output_path().encode('ascii'), 'Z': None},
-            enabled_writes=['disk'],
-            ) as s:
-            s.execute('open "test" for output as 1: print#1, 42: close 1')
-        assert os.path.isfile(self.output_path('TEST'))
-        # must be ascii
-        with Session(
-            devices={'A': b'ab\xc2', 'Z': None},
-            enabled_writes=['disk'],
-            ) as s:
-            s.execute('files')
-            output = [_row.strip() for _row in self.get_text(s)]
-        assert output[0] == b'@:\\'
+#    def test_bytes_mount(self):
+#        """Test specifying mount dir as bytes."""
+#        with Session(
+#            devices={'A': {'path': self.output_path().encode('ascii')}, 'Z': None},
+#            enabled_writes=['disk'],
+#            ) as s:
+#            s.execute('open "test" for output as 1: print#1, 42: close 1')
+#        assert os.path.isfile(self.output_path('TEST'))
+#        # must be ascii
+#        with Session(
+#            devices={'A': {'path': b'ab\xc2'}, 'Z': None},
+#            enabled_writes=['disk'],
+#            ) as s:
+#            s.execute('files')
+#            output = [_row.strip() for _row in self.get_text(s)]
+#        assert output[0] == b'@:\\'
 
     def test_open_bad_device(self):
         """Test open on a bad device name."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "#:test" for output as 1: print#1, 42: close 1')
@@ -540,7 +540,7 @@ class DiskTest(TestCase):
     def test_open_null_device(self):
         """Test the NUL device."""
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('open "NUL" for output as 1: print#1, 42: close 1')
@@ -550,7 +550,7 @@ class DiskTest(TestCase):
     def test_open_bad_number(self):
         """Test opening to a bad file number."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A',
             enabled_writes=['disk'],
             ) as s:
@@ -561,7 +561,7 @@ class DiskTest(TestCase):
     def test_open_reuse_number(self):
         """Test opening to a number taht's already in use."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A',
             enabled_writes=['disk'],
             ) as s:
@@ -589,7 +589,7 @@ class DiskTest(TestCase):
             b'LongFileName2.': b'LONGFILE',
             b'Long.FileName.2': b'LONG.FIL'
         }
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             for name in names:
                 with open(os.path.join(self.output_path().encode('ascii'), name), 'wb') as f:
                     f.write(b'1000 a$="%s"\r\n' % (name,))
@@ -645,7 +645,7 @@ class DiskTest(TestCase):
         if ignores_dots:
             basicnames[b'LongFileName.'] = b'LongFileName'
             basicnames[b'LongFileName..'] = b'LongFileName'
-        with Session(devices={b'A': self.output_path()}) as s:
+        with Session(devices={b'A': {'path': self.output_path()}}) as s:
             for name in names:
                 with open(os.path.join(self.output_path().encode('ascii'), name), 'wb') as f:
                     f.write(b'1000 a$="%s"\r\n' % (name,))
@@ -659,7 +659,7 @@ class DiskTest(TestCase):
         for name in names:
             open(os.path.join(self.output_path().encode('ascii'), name), 'wb').close()
         with Session(
-            devices={b'A': self.output_path()},
+            devices={b'A': {'path': self.output_path()}},
             enabled_writes=['disk'],
             ) as s:
             s.execute('kill "VERYLONG.EXT"')
@@ -675,7 +675,7 @@ class DiskTest(TestCase):
     def test_save_no_save_write(self):
         """Save to a disk file without save enabled."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['disk'],
             ) as s:
@@ -688,7 +688,7 @@ class DiskTest(TestCase):
     def test_disk_write_no_disk_write(self):
         """Write to a disk file without disk write enabled."""
         with Session(
-            devices={b'A': self.output_path()}, 
+            devices={b'A': {'path': self.output_path()}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:

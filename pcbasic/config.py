@@ -739,10 +739,13 @@ class Settings(object):
                     logging.error(u'Could not mount `%s`: not a directory', spec)
                     continue
                 mount_data = {'path': path}
-                if len(params) > 1:
-                    mount_data['cwd'] = params[1]
-                if len(params) > 2 and params[2] in access_specs:
-                    mount_data['write_enabled'] = access_specs[params[2]]
+                if len(params) > 1 and params[1] not in ['', '-']:
+                        mount_data['cwd'] = params[1]
+                if len(params) > 2:
+                    if params[2] not in access_specs:
+                        logging.warning(u'Ignoring access specifier `%s` in `%s`: invalid', params[2], spec)
+                    else:
+                        mount_data['write_enabled'] = access_specs[params[2]]
                 mount_dict[letter] = mount_data
             except (TypeError, ValueError) as e:
                 logging.error(u'Could not mount `%s`: %s', spec, e)
