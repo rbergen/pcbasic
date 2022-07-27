@@ -526,6 +526,7 @@ class DiskTest(TestCase):
 #            s.execute('files')
 #            output = [_row.strip() for _row in self.get_text(s)]
 #        assert output[0] == b'@:\\'
+=======
 
     def test_open_bad_device(self):
         """Test open on a bad device name."""
