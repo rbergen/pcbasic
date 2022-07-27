@@ -705,7 +705,7 @@ class Settings(object):
         else:
             mount_dict = self._get_drives_from_list(mount_list)
         # directory for bundled BASIC programs accessible through @:
-        mount_dict[b'@'] = PROGRAM_PATH
+        mount_dict[b'@'] = {'path': PROGRAM_PATH}
         # if Z: not specified, override it to avoid mounting through Session default
         if b'Z' not in mount_dict:
             mount_dict[b'Z'] = None
@@ -713,6 +713,10 @@ class Settings(object):
 
     def _get_drives_from_list(self, mount_list):
         """Assign drive letters based on mount specification."""
+        access_specs = {
+            u'rw': True,
+            u'ro': False
+        }
         mount_dict = {}
         for spec in mount_list:
             # the last one that's specified will stick
@@ -722,12 +726,27 @@ class Settings(object):
                     letter = letter.encode('ascii').upper()
                 except UnicodeError:
                     logging.error(u'Could not mount `%s`: invalid drive letter', spec)
+                    continue
                 # take abspath first to ensure unicode, realpath gives bytes for u'.'
                 path = os.path.realpath(os.path.abspath(path))
+                # drive can be non-empty only on Windows, needs to be split out first as we use :
+                drive, drivepath = os.path.splitdrive(path)
+                params = split_quoted(
+                    drivepath, split_by=u':', quote=u'"', strip_quotes=True
+                )
+                path = drive + params[0]
                 if not os.path.isdir(path):
                     logging.error(u'Could not mount `%s`: not a directory', spec)
-                else:
-                    mount_dict[letter] = path
+                    continue
+                mount_data = {'path': path}
+                if len(params) > 1 and params[1] not in ['', '-']:
+                        mount_data['cwd'] = params[1]
+                if len(params) > 2:
+                    if params[2] not in access_specs:
+                        logging.warning(u'Ignoring access specifier `%s` in `%s`: invalid', params[2], spec)
+                    else:
+                        mount_data['write_enabled'] = access_specs[params[2]]
+                mount_dict[letter] = mount_data
             except (TypeError, ValueError) as e:
                 logging.error(u'Could not mount `%s`: %s', spec, e)
         return mount_dict
@@ -755,15 +774,15 @@ class Settings(object):
                             path += u'\\'
                             cwd = cwd[1:]
                         if cwd:
-                            mount_dict[letter] = u':'.join((path, cwd))
+                            mount_dict[letter] = {'path': u':'.join((path, cwd))}
                         else:
-                            mount_dict[letter] = path
+                            mount_dict[letter] = {'path': path}
                     else:
                         logging.warning('Not mounting `%s`: no drive letter.', cwd)
             os.chdir(save_current)
         else:
             # non-Windows systems simply have 'Z:' set to their their cwd by default
-            mount_dict[b'Z'] = getcwdu()
+            mount_dict[b'Z'] = {'path': getcwdu()}
         return mount_dict
 
     def _get_default_current_device(self):

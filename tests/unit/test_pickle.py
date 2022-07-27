@@ -42,7 +42,7 @@ class PickleTest(TestCase):
     def test_pickle_session_open_file(self):
         """Pickle Session object with open file."""
         s = Session(
-            devices={'a': self.output_path()},
+            devices={'a': {'path': self.output_path()}},
             enabled_writes=['disk'],
             )
         s.execute('open "A:TEST" for output as 1')
