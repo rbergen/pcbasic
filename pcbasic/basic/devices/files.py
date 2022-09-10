@@ -634,18 +634,14 @@ class Files(object):
         """Initialise disk devices."""
         # if Z not specified, mount to cwd by default (override by specifying 'Z': None)
         if b'Z' not in device_params:
-            device_params[b'Z'] = getcwdu()
+            device_params[b'Z'] = {'path': getcwdu()}
         # disk devices
         for letter in iterchar(DRIVE_LETTERS):
             if letter in device_params and device_params[letter]:
-                # drive can be non-empty only on Windows, needs to be split out first as we use :
-                drive, drivepath = os.path.splitdrive(device_params[letter])
-                params = split_quoted(
-                    drivepath, split_by=u':', quote=u'"', strip_quotes=True
-                )
-                path = drive + params[0]
-                cwd = params[1] if len(params) > 1 else u''
-                drive_write = {u'rw': True, u'ro': False}.get(params[2], write_enabled) if len(params) > 2 else write_enabled
+                params = device_params[letter]
+                path = params['path']
+                cwd = params.get('cwd', u'')
+                drive_write = params.get('write_enabled', write_enabled)
             else:
                 path, cwd, drive_write = None, u'', write_enabled
             # treat device @: separately - internal disk must exist but may remain unmounted

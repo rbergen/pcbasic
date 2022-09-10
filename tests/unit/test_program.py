@@ -51,14 +51,14 @@ class DiskTest(unittest.TestCase):
             b'\x1a'
         )
         with Session(
-            devices={b'A': self._test_dir}, 
+            devices={b'A': {'path': self._test_dir}}, 
             current_device='A:',
             enabled_writes=['save'],
             ) as s:
             s.execute(plaintext)
             s.execute('save "prog",P')
         with Session(
-            devices={b'A': self._test_dir}, 
+            devices={b'A': {'path': self._test_dir}}, 
             current_device='A:',
             enabled_writes=['save','disk'],
             ) as s:

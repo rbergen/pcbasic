@@ -713,12 +713,30 @@
         </dd>
 
         <dt id="--mount">
-            <code><b>--mount=</b>[<var>drive</var><b>:</b><var>path</var>[<b>,</b><var>drive</var><b>:</b><var>path</var> ... ]]</code>
+            <code><b>--mount=</b>[<var>drive</var><b>:</b><var>path</var>[<b>:</b><var>cwd</var>[<b>:</b><var>access</var>]]][<b>,</b><var>drive</var><b>:</b><var>path</var> ... ]]</code>
         </dt>
         <dd>
             Assign the path
             <code><var>path</var></code> to drive letter <code><var>drive</var>:</code>.
             The path can be absolute or relative.
+            <br />
+            Optionally, the following additional parameters can be specified, each preceded by a <code><b>:</b></code>
+            <dl class="compact">
+                <dt><code><var>cwd</var></code></dt>
+                <dd>
+                    The current directory on the drive. To explicitly not specify <code><var>cwd</var></code>, use 
+                    <code><b>""</b></code> or <code><b>-</b></code>. This really only makes sense if you want to specify
+                    <code><var>access</var></code> but not <code><var>cwd</var></code>.
+                </dd>
+
+                <dt><code><var>access</var></code></dt>
+                <dd>
+                    Specification if writes should be allowed on the drive (<code><b>rw</b></code>), or alternatively if the 
+                    drive should be mounted read-only (<code><b>ro</b></code>). If <code><var>access</var></code> is not 
+                    specified then writes will be allowed if <code><b>d</b></code> is <b>not</b> specified with the 
+                    <code><b><a href="#--disable-writes">--disable-writes</a></b></code> option.
+                </dd>
+            </dl>
             <br />
             If this option is not specified: on Windows, all Windows drive letters
             will be assigned to PC-BASIC drive

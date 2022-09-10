@@ -174,7 +174,7 @@ class SessionTest(TestCase):
             output = f.read()
         assert output == b'test\x1a'
         # existing file by BASIC name
-        with Session(devices={b'Z': self.output_path()}) as s:
+        with Session(devices={b'Z': {'path': self.output_path()}}) as s:
             name = s.bind_file(b'Z:TESTFILE')
             # write to file
             s.execute('open "{0}" for input as 1'.format(name))
