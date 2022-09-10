@@ -56,12 +56,14 @@ def get_platform_info():
     try:
         from ..interface import video_sdl2
         video_sdl2._import_sdl2()
-        info.append(u'sdl2: %s' % (video_sdl2.sdl2.get_dll_file()))
-        if video_sdl2.sdlgfx:
-            info.append(u'sdl2_gfx: %s' % (video_sdl2.sdlgfx.libfile))
+
+        info.append(u'sdl2: %s' % (video_sdl2.sdl2.sdl2_lib.libfile,))
+        if video_sdl2:
+            info.append(u'sdl2_gfx: %s' % (video_sdl2.sdl2.gfx_lib.libfile, ))
         else:
             info.append(u'sdl2_gfx: --')
-    except ImportError:
+    except ImportError as e:
+        raise
         info.append(u'sdl2: --')
         sdl2 = None
     info.append(u'\nEXTERNAL TOOLS')
@@ -74,11 +76,13 @@ def get_platform_info():
 
 
 class DebugException(BaseException):
-    """Test exception for debugging purposes"""
+    """This exception was raised deliberately through the debug module."""
     # inherit from BaseException to circumvent extension manager catching Exception
 
     def __repr__(self):
         return self.__doc__
+
+    __str__ = __repr__
 
 
 class DebugSession(api.Session):
