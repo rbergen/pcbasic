@@ -46,7 +46,7 @@
 >
 > ### Maintenance policy (or at least, intent) ###
 >
-> At the time of writing (July 23, 2022), this branch is tracking the [master branch](https://github.com/robhagemans/pcbasic/tree/master) of PC-BASIC (current version is 2.0.5). I'll try to update my read-only device branch as quickly as possible after PC-BASIC itself is updated, but I cannot give any guarantees about the speed at which I will be able to do so. Feel free to open an issue on this repository (i.e. [my fork](https://github.com/rbergen/pcbasic)) if you find I'm lagging behind.
+> At the time of writing (September 10, 2022), this branch is tracking the [master branch](https://github.com/robhagemans/pcbasic/tree/master) of PC-BASIC (current version is 2.0.6). I'll try to update my read-only device branch as quickly as possible after PC-BASIC itself is updated, but I cannot give any guarantees about the speed at which I will be able to do so. Feel free to open an issue on this repository (i.e. [my fork](https://github.com/rbergen/pcbasic)) if you find I'm lagging behind.
 >
 > ### Support and interaction ###
 >
